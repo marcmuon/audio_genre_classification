@@ -21,4 +21,5 @@ if __name__ == "__main__":
     audio_list = [Audio(path) for path in paths]
     for audio in audio_list:
         audio.extract_mfcc()
-        audio.extract_spec_con()
+        audio.extract_spectral()
+        audio.extract_tempo()
