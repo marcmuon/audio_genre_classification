@@ -1,6 +1,7 @@
 from os.path import expanduser
 from audio import Audio
 import os
+import numpy as np
 
 
 def get_audio_paths(audio_dir):
@@ -20,6 +21,8 @@ if __name__ == "__main__":
     paths = get_audio_paths('data/audio')
     audio_list = [Audio(path) for path in paths]
     for audio in audio_list:
+        # Calling these methods populate 'audio.features'
         audio.extract_mfcc()
-        audio.extract_spectral()
+        audio.extract_spectral_contrast()
         audio.extract_tempo()
+    feature_matrix = np.vstack([audio.features for audio in audio_list])
