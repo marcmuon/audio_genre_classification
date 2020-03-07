@@ -3,13 +3,13 @@ import numpy as np
 
 
 class Audio:
-    def __init__(self, path, sr=22050, duration=120):
+    def __init__(self, metadata, sr=22050, duration=120):
         """
         Educated assumption: we can get all relevant info
         for techno song timbre in the first two minutes.
         """
-        self.path = path
-        self.y, self.sr = librosa.load(path, sr, duration)
+        self.path, self.label = metadata
+        self.y, self.sr = librosa.load(self.path, sr, duration)
         self.features = None
 
     def _concat_features(self, feature):
@@ -19,8 +19,8 @@ class Audio:
 
     def extract_mfcc(self, n_mfcc=12):
         """
-        Extract MFCC mean and std_dev vecs for an audio clip.
-        Appends (2*n_mfcc,) shaped vector to instance feature vector
+        Extract MFCC mean and std_dev vecs for a clip.
+        Appends (2*n_mfcc,) shaped vector to self.features
         """
         mfcc = librosa.feature.mfcc(self.y,
                                     sr=self.sr,
@@ -33,8 +33,8 @@ class Audio:
 
     def extract_spectral_contrast(self, n_bands=3):
         """
-        Extract Spectral Contrast mean and std_dev vecs for an audio clip.
-        Appends (2*(n_bands+1),) shaped vector to instance feature vector
+        Extract Spectral Contrast mean and std_dev vecs for a clip.
+        Appends (2*(n_bands+1),) shaped vector to self.features
         """
         spec_con = librosa.feature.spectral_contrast(y=self.y,
                                                      sr=self.sr,
