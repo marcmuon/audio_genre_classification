@@ -22,11 +22,11 @@ def get_audio_metadata(playlist):
 if __name__ == "__main__":
 
     all_metadata = get_audio_metadata(playlist='data/Music.txt')
+
     audio_features = []
     for metadata in all_metadata:
         audio = AudioFeature(metadata)
-        audio.extract_features()
-        audio.save_local(clean=True)
+        audio.extract_features(save=True)
         audio_features.append(audio)
 
     feature_matrix = np.vstack([audio.features for audio in audio_features])

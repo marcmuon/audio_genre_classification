@@ -66,19 +66,22 @@ class AudioFeature:
         tempo = librosa.beat.tempo(y=self.y, sr=self.sr)
         self._concat_features(tempo)
 
-    def extract_features(self):
+    def extract_features(self, save):
         self._extract_mfcc()
         self._extract_spectral_contrast()
         self._extract_tempo()
 
-    def save_local(self, clean=False):
+        if save:
+            self._save_local(mem_clean=True)
+
+    def _save_local(self, mem_clean=False):
         self.local_path = self.path.split('/')[-1]
         self.local_path = self.local_path.replace('.mp3', '').replace(' ', '')
 
         with open(f'data/{self.local_path}.pkl', 'wb') as out_f:
             pickle.dump(self.features, out_f)
 
-        if clean:
+        if mem_clean:
             self.y = None
 
 
