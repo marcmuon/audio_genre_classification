@@ -14,7 +14,10 @@ class AudioFeature:
         offset num seconds into the song (avoid intros)
         """
         self.path, self.genre_label = metadata
-        self.y, self.sr = librosa.load(self.path, sr, duration, offset)
+        self.y, self.sr = librosa.load(self.path,
+                                       sr=sr,
+                                       duration=duration,
+                                       offset=offset)
 
         self.features = None
 
@@ -79,7 +82,7 @@ class AudioFeature:
         self.local_path = self.local_path.replace('.mp3', '').replace(' ', '')
 
         with open(f'data/{self.local_path}.pkl', 'wb') as out_f:
-            pickle.dump(self.features, out_f)
+            pickle.dump(self, out_f)
 
         if mem_clean:
             self.y = None
