@@ -1,5 +1,6 @@
 import librosa
 import numpy as np
+import pickle
 
 
 class AudioFeature:
@@ -7,8 +8,7 @@ class AudioFeature:
                  metadata,
                  duration=5,
                  offset=25,
-                 sr=22050,
-                 save_local=True):
+                 sr=22050):
         """
         Keep duration num seconds of each clip, starting at
         offset num seconds into the song (avoid intros)
@@ -16,11 +16,7 @@ class AudioFeature:
         self.path, self.genre_label = metadata
         self.y, self.sr = librosa.load(self.path, sr, duration, offset)
 
-        self.features = None  # needed for _concat_features function logic
-        self.features = self.extract_features()
-
-        if save_local:
-            self.local_path = self.save_local(clean=True)
+        self.features = None
 
     def _concat_features(self, feature):
         """
@@ -75,9 +71,12 @@ class AudioFeature:
         self._extract_spectral_contrast()
         self._extract_tempo()
 
-    def save_local(self, clean):
+    def save_local(self, clean=False):
         self.local_path = self.path.split('/')[-1]
-        np.save(f'data/{self.local_path}', self.features)
+        self.local_path = self.local_path.replace('.mp3', '').replace(' ', '')
+
+        with open(f'data/{self.local_path}.pkl', 'wb') as out_f:
+            pickle.dump(self.features, out_f)
 
         if clean:
             self.y = None

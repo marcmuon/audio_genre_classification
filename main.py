@@ -22,7 +22,12 @@ def get_audio_metadata(playlist):
 if __name__ == "__main__":
 
     all_metadata = get_audio_metadata(playlist='data/Music.txt')
-    audio_features = [AudioFeature(metadata) for metadata in all_metadata]
+    audio_features = []
+    for metadata in all_metadata:
+        audio = AudioFeature(metadata)
+        audio.extract_features()
+        audio.save_local(clean=True)
+        audio_features.append(audio)
 
     feature_matrix = np.vstack([audio.features for audio in audio_features])
     genre_labels = [audio.genre_label for audio in audio_features]
