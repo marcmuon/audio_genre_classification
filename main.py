@@ -1,4 +1,4 @@
-from audio import Audio
+from audio import AudioFeature
 import numpy as np
 import pandas as pd
 
@@ -22,13 +22,7 @@ def get_audio_metadata(playlist):
 if __name__ == "__main__":
 
     all_metadata = get_audio_metadata(playlist='data/Music.txt')
-    audio_files = [Audio(metadata) for metadata in all_metadata]
+    audio_features = [AudioFeature(metadata) for metadata in all_metadata]
 
-    for audio in audio_files:  # populates audio.features in each instance
-        audio.extract_mfcc()
-        audio.extract_spectral_contrast()
-        audio.extract_tempo()
-        audio.save_local()
-
-    feature_matrix = np.vstack([audio.features for audio in audio_files])
-    genre_labels = [audio.genre_label for audio in audio_files]
+    feature_matrix = np.vstack([audio.features for audio in audio_features])
+    genre_labels = [audio.genre_label for audio in audio_features]

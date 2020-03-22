@@ -2,20 +2,25 @@ import librosa
 import numpy as np
 
 
-class Audio:
+class AudioFeature:
     def __init__(self,
                  metadata,
                  duration=5,
                  offset=25,
-                 sr=22050):
+                 sr=22050,
+                 save_local=True):
         """
         Keep duration num seconds of each clip, starting at
         offset num seconds into the song (avoid intros)
         """
         self.path, self.genre_label = metadata
         self.y, self.sr = librosa.load(self.path, sr, duration, offset)
-        self.features = None
-        self.local_path = None
+
+        self.features = None  # needed for _concat_features function logic
+        self.features = self.extract_features()
+
+        if save_local:
+            self.local_path = self.save_local(clean=True)
 
     def _concat_features(self, feature):
         """
@@ -27,7 +32,7 @@ class Audio:
             [self.features, feature]
             if self.features is not None else feature)
 
-    def extract_mfcc(self, n_mfcc=12):
+    def _extract_mfcc(self, n_mfcc=12):
         """
         Extract MFCC mean and std_dev vecs for a clip.
         Appends (2*n_mfcc,) shaped vector to
@@ -42,7 +47,7 @@ class Audio:
         mfcc_feature = np.hstack([mfcc_mean, mfcc_std])
         self._concat_features(mfcc_feature)
 
-    def extract_spectral_contrast(self, n_bands=3):
+    def _extract_spectral_contrast(self, n_bands=3):
         """
         Extract Spectral Contrast mean and std_dev vecs for a clip.
         Appends (2*(n_bands+1),) shaped vector to
@@ -57,7 +62,7 @@ class Audio:
         spec_con_feature = np.hstack([spec_con_mean, spec_con_std])
         self._concat_features(spec_con_feature)
 
-    def extract_tempo(self):
+    def _extract_tempo(self):
         """
         Extract the BPM.
         Appends (1,) shaped vector to instance feature vector
@@ -65,9 +70,17 @@ class Audio:
         tempo = librosa.beat.tempo(y=self.y, sr=self.sr)
         self._concat_features(tempo)
 
-    def save_local(self):
+    def extract_features(self):
+        self._extract_mfcc()
+        self._extract_spectral_contrast()
+        self._extract_tempo()
+
+    def save_local(self, clean):
         self.local_path = self.path.split('/')[-1]
         np.save(f'data/{self.local_path}', self.features)
+
+        if clean:
+            self.y = None
 
 
 if __name__ == "__main__":
