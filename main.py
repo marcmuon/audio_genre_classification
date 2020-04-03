@@ -27,15 +27,13 @@ def get_audio_metadata(playlist):
 
 if __name__ == "__main__":
 
-    all_metadata = get_audio_metadata(playlist='data/Music.txt')
+    all_metadata = get_audio_metadata(playlist='data/Subset.txt')
 
     audio_features = []
     for metadata in all_metadata:
         audio = AudioFeature(metadata)
         audio.extract_features(save=True)
         audio_features.append(audio)
-
-    # TODO - implement cache loader for data previously saved to disk
 
     feature_matrix = np.vstack([audio.features for audio in audio_features])
     genre_labels = [audio.genre_label for audio in audio_features]
@@ -65,5 +63,3 @@ if __name__ == "__main__":
     model = Model(feature_matrix, labels, model_cfg)
     model.run_cv_trials(n_trials=2)
     model.predict_from_holdout()
-
-    # TODO need more jazz and ambient examples!
