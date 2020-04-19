@@ -6,6 +6,7 @@ from sklearn.model_selection import (
     StratifiedKFold,
 )
 from sklearn.metrics import confusion_matrix
+from sklearn.preprocessing import LabelEncoder
 import numpy as np
 
 
@@ -43,6 +44,10 @@ class Model:
         is useful for debugging as you'll see if your models are overfitting
         badly.
         """
+
+        encoder = LabelEncoder()
+        self.y = encoder.fit_transform(self.y)
+
         self.best_estimators = []
         self.holdout_test_sets = []
 

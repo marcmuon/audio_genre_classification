@@ -3,16 +3,14 @@ from model import Model
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.preprocessing import StandardScaler
 
 
-def get_audio_metadata(playlist):
+def extract_audio_metadata(playlist):
     """
-    Currently assumes an Apple Music playlist saved as plain text.
-    Returns: zip object with (audio_paths, genre_labels)
+    Assumes an Apple Music playlist saved as plain text as parse input.
+    Returns: zip object with (paths, genres)
     """
-
-    # TODO - assert check that length > intended offset+duration
 
     df = pd.read_csv(playlist, sep='\t')
     df = df[['Location', 'Genre']]
@@ -20,26 +18,24 @@ def get_audio_metadata(playlist):
     paths = df['Location'].values.astype(str)
     paths = np.char.replace(paths, 'Macintosh HD', '')
 
-    labels = df['Genre'].values
+    genres = df['Genre'].values
 
-    return zip(paths, labels)
+    return zip(paths, genres)
 
 
 if __name__ == "__main__":
 
-    all_metadata = get_audio_metadata(playlist='data/Subset.txt')
+    all_metadata = extract_audio_metadata(playlist='data/Subset.txt')
 
     audio_features = []
     for metadata in all_metadata:
         audio = AudioFeature(metadata)
-        audio.extract_features(save=True)
+        audio.extract_features('mfcc', 'spectral_contrast', 'tempo',
+                               save_local=True)
         audio_features.append(audio)
 
     feature_matrix = np.vstack([audio.features for audio in audio_features])
     genre_labels = [audio.genre_label for audio in audio_features]
-
-    le = LabelEncoder()
-    labels = le.fit_transform(genre_labels)
 
     model_cfg = dict(
         tt_dict=dict(shuffle=True, test_size=.2),
@@ -60,6 +56,6 @@ if __name__ == "__main__":
                      shuffle=True)
     )
 
-    model = Model(feature_matrix, labels, model_cfg)
+    model = Model(feature_matrix, genre_labels, model_cfg)
     model.run_cv_trials(n_trials=2)
     model.predict_from_holdout()

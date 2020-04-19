@@ -69,15 +69,29 @@ class AudioFeature:
         tempo = librosa.beat.tempo(y=self.y, sr=self.sr)
         self._concat_features(tempo)
 
-    def extract_features(self, save):
-        self._extract_mfcc()
-        self._extract_spectral_contrast()
-        self._extract_tempo()
+    def extract_features(self, *feature_list, save_local=False):
+        """
+        Specify a list of features to extract, and a feature vector will be
+        built for you for a given Audio sample.
 
-        if save:
+        Option to save vector output locally as a .pkl file in data/ directory
+
+        Currently supported features: 'mfcc', 'spectral_contrast', 'tempo'
+        """
+        for feature in feature_list:
+            if feature == 'mfcc':
+                self._extract_mfcc()
+            elif feature == 'spectral_contrast':
+                self._extract_spectral_contrast()
+            elif feature == 'tempo':
+                self._extract_tempo()
+            else:
+                raise KeyError('Feature type not understood; see docstring.')
+
+        if save_local:
             self._save_local(mem_clean=True)
 
-    def _save_local(self, mem_clean=False):
+    def _save_local(self, mem_clean=True):
         self.local_path = self.path.split('/')[-1]
         self.local_path = self.local_path.replace('.mp3', '').replace(' ', '')
 
