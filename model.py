@@ -119,7 +119,7 @@ class Model:
 
         for i in range(len(self.fpr)):
 
-            print(f'False Positive Rate per Class, Trial {i}: {self.fpr}')
-            print(f'False Negative Rate per Class, Trial {i}: {self.fnr}')
-            print(f'Accuracy per Class, Trial {i}: {self.accuracy}')
+            print(f'False Positive Rate per Class, Trial {i}: {self.fpr[i]}')
+            print(f'False Negative Rate per Class, Trial {i}: {self.fnr[i]}')
+            print(f'Accuracy per Class, Trial {i}: {self.accuracy[i]}')
 
