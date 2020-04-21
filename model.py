@@ -110,15 +110,16 @@ class Model:
             TP = TP.astype(float)
             TN = TN.astype(float)
 
-            print(f'Test Set from Trial Number {i}:')
+            print(f'Test Set from Trial Number {i}, per class:')
             print(f'TN:{TN}, FP:{FP}, FN:{FN}, TP:{TP}')
 
             self.fpr.append(FP / (FP + TN))
             self.fnr.append(FN / (TP + FN))
             self.accuracy.append((TP + TN) / (TP + TN + FP + FN))
 
-        print(f'Averages over all Test Sets:')
-        print(f'False Positive Rate: {self.fpr}')
-        print(f'False Negative Rate: {self.fnr}')
-        print(f'Accuracy: {self.accuracy}')
+        for i in len(self.fpr):
+
+            print(f'False Positive Rate per Class, Trial {i}: {self.fpr}')
+            print(f'False Negative Rate per Class, Trial {i}: {self.fnr}')
+            print(f'Accuracy per Class, Trial {i}: {self.accuracy}')
 
