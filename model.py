@@ -122,5 +122,3 @@ class Model:
         print(f'False Negative Rate: {self.fnr}')
         print(f'Accuracy: {self.accuracy}')
 
-    # def save(self):
-        # pass

@@ -100,7 +100,3 @@ class AudioFeature:
 
         if mem_clean:
             self.y = None
-
-
-if __name__ == "__main__":
-    pass
