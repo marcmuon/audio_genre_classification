@@ -22,7 +22,7 @@ class Model:
         self.best_estimators = None
         self.holdout_test_sets = None
 
-        # populated in .predict()
+        # populated in .predict_from_holdout()
         self.fnr = None
         self.fpr = None
         self.accuracy = None
