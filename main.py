@@ -6,7 +6,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 
 
-def parse_audio_playlist(playlist_file):
+def parse_audio_playlist(playlist):
     """
     Assumes an Apple Music playlist saved as plain text as parse input.
     Returns: zip object with (paths, genres)
@@ -25,17 +25,18 @@ def parse_audio_playlist(playlist_file):
 
 if __name__ == "__main__":
 
-    all_metadata = parse_audio_playlist(playlist_file='data/Subset.txt')
+    all_metadata = parse_audio_playlist(playlist='data/Subset.txt')
 
     audio_features = []
     for metadata in all_metadata:
-        audio = AudioFeature(metadata)
+        path, genre = metadata
+        audio = AudioFeature(path, genre)
         audio.extract_features('mfcc', 'spectral_contrast', 'tempo',
                                save_local=True)
         audio_features.append(audio)
 
     feature_matrix = np.vstack([audio.features for audio in audio_features])
-    genre_labels = [audio.genre_label for audio in audio_features]
+    genre_labels = [audio.genre for audio in audio_features]
 
     model_cfg = dict(
         tt_dict=dict(shuffle=True, test_size=.2),

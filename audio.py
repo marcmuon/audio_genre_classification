@@ -5,15 +5,17 @@ import pickle
 
 class AudioFeature:
     def __init__(self,
-                 metadata,
-                 duration=5,
+                 path,
+                 genre,
+                 duration=10,
                  offset=25,
                  sr=22050):
         """
         Keep duration num seconds of each clip, starting at
         offset num seconds into the song (avoid intros)
         """
-        self.path, self.genre_label = metadata
+        self.path = path
+        self.genre = genre
         self.y, self.sr = librosa.load(self.path,
                                        sr=sr,
                                        duration=duration,
@@ -24,7 +26,7 @@ class AudioFeature:
     def _concat_features(self, feature):
         """
         Whenever an _extract_X method is called by main.py,
-        this helper function concatatenates to Audio instance
+        this helper function concatenates to Audio instance
         features attribute
         """
         self.features = np.hstack(
@@ -33,7 +35,7 @@ class AudioFeature:
 
     def _extract_mfcc(self, n_mfcc=12):
         """
-        Extract MFCC mean and std_dev vecs for a clip.
+        Extract MFCC mean and std_dev vectors for a clip.
         Appends (2*n_mfcc,) shaped vector to
         instance feature vector
         """
@@ -48,7 +50,7 @@ class AudioFeature:
 
     def _extract_spectral_contrast(self, n_bands=3):
         """
-        Extract Spectral Contrast mean and std_dev vecs for a clip.
+        Extract Spectral Contrast mean and std_dev vectors for a clip.
         Appends (2*(n_bands+1),) shaped vector to
         instance feature vector
         """
