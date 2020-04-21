@@ -8,8 +8,7 @@ class AudioFeature:
                  path,
                  genre,
                  duration=10,
-                 offset=25,
-                 sr=22050):
+                 offset=25):
         """
         Keep duration num seconds of each clip, starting at
         offset num seconds into the song (avoid intros)
@@ -17,10 +16,8 @@ class AudioFeature:
         self.path = path
         self.genre = genre
         self.y, self.sr = librosa.load(self.path,
-                                       sr=sr,
                                        duration=duration,
                                        offset=offset)
-
         self.features = None
 
     def _concat_features(self, feature):
@@ -56,7 +53,7 @@ class AudioFeature:
         """
         spec_con = librosa.feature.spectral_contrast(y=self.y,
                                                      sr=self.sr,
-                                                     n_bands=3)
+                                                     n_bands=n_bands)
 
         spec_con_mean = spec_con.mean(axis=1).T
         spec_con_std = spec_con.std(axis=1).T
