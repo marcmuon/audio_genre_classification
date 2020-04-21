@@ -117,7 +117,7 @@ class Model:
             self.fnr.append(FN / (TP + FN))
             self.accuracy.append((TP + TN) / (TP + TN + FP + FN))
 
-        for i in len(self.fpr):
+        for i in range(len(self.fpr)):
 
             print(f'False Positive Rate per Class, Trial {i}: {self.fpr}')
             print(f'False Negative Rate per Class, Trial {i}: {self.fnr}')
