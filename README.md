@@ -1,4 +1,5 @@
 # audio_genre_classification
 Train a model to classify various audio file clips by genre, and predict on new data.
 
-Currently a work in progress! (as of March 2020). Check back in a few weeks for the completed project.
+This repo exists to host code showcased on my blog post 'Audio Genre Classification with Python OOP':
+https://towardsdatascience.com/audio-genre-classification-with-python-oop-66119e10cd05
