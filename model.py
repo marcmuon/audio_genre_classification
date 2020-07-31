@@ -23,12 +23,6 @@ class Model:
         self.holdout_test_set = None
         self.holdout_val_set = None
 
-        # populated in .predict_from_holdout()
-        self.fnr = None
-        self.fpr = None
-        self.accuracy = None
-        self.y_pred = None
-
 
     def train_kfold(self):
         """
@@ -52,19 +46,19 @@ class Model:
                 stratify=self.y,
                 **self.cfg['tt_test_dict'])
 
-        self.holdout_test_set.append((X_test, y_test))
+        self.holdout_test_set = (X_test, y_test)
 
         # From the non-holdout-test data, split off a validation piece
         X_train, X_val, y_train, y_val = train_test_split(
             X_cv,
             y_cv,
-            random_state=i,
+            random_state=42,
             stratify=y_cv,
             **self.cfg['tt_val_dict'])
 
         # Note these val sets won't go into GridSearchCV
         # We'll predict on these in the .predict_from_val() method
-        self.holdout_val_set.append((X_val, y_val))
+        self.holdout_val_set = (X_val, y_val)
         
         pipe = Pipeline([
             ('scaler', self.cfg['scaler']),
@@ -103,7 +97,7 @@ class Model:
         return TP, FP, TN, FN
 
 
-    def predict(self, holdout_type)
+    def predict(self, holdout_type):
         """
         Specify either "val" or "test" as a string arg
         """
@@ -119,10 +113,10 @@ class Model:
 
     def _predict_from_val(self):
 
-        X_val, y_val = self.holdout_val_set[0]
+        X_val, y_val = self.holdout_val_set
 
-        scaler = self.best_estimators[i]['scaler']
-        model = self.best_estimators[i]['model']
+        scaler = self.best_estimator['scaler']
+        model = self.best_estimator['model']
 
         X_val_scaled = scaler.transform(X_val)
         y_pred = model.predict(X_val_scaled)
@@ -130,24 +124,20 @@ class Model:
 
         TP, FP, TN, FN = self._parse_conf_matrix(cnf_matrix)
         
-        print(f'Val Set from Trial Number {i}, per class:')
+        print(f'Val Set, per class:')
         print(f'TP:{TP}, FP:{FP}, TN:{TN}, FN:{FN}')
 
-        self.fpr = FP / (FP + TN)
-        self.fnr = FN / (TP + FN)
-        self.accuracy = (TP + TN) / (TP + TN + FP + FN)
 
-        print(f'Avg False Positive Rate per Class Across Trials: {self.fpr}')
-        print(f'Avg False Negative Rate per Class, Across Trials: {self.fnr}')
-        print(f'Avg Accuracy per Class, Across Trials: {self.accuracy}')
-        print("")
+        print(f'Val False Positive Rate per Class: {FP / (FP + TN)}')
+        print(f'Val False Negative Rate per Class: {FN / (TP + FN)}')
+        print(f'Val Accuracy per Class: {(TP + TN) / (TP + TN + FP + FN)}')
 
 
     def _predict_from_test(self):
 
-        X_test, y_test = self.holdout_test_set[0]
-        scaler = self.best_estimators[0]['scaler']
-        model = self.best_estimators[0]['model']
+        X_test, y_test = self.holdout_test_set
+        scaler = self.best_estimator['scaler']
+        model = self.best_estimator['model']
 
         X_test_scaled = scaler.transform(X_test)
         y_pred = model.predict(X_test_scaled)

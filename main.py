@@ -43,16 +43,16 @@ def load_saved_audio_features(path):
 
 if __name__ == "__main__":
 
-    all_metadata = parse_audio_playlist(playlist="data/Subset.txt")
+    # all_metadata = parse_audio_playlist(playlist="data/Subset.txt")
 
-    audio_features = []
-    for metadata in all_metadata:
-        path, genre = metadata
-        audio = AudioFeature(path, genre)
-        audio.extract_features("mfcc", "spectral_contrast", "tempo", save_local=True)
-        audio_features.append(audio)
+    # audio_features = []
+    # for metadata in all_metadata:
+    #     path, genre = metadata
+    #     audio = AudioFeature(path, genre)
+    #     audio.extract_features("mfcc", "spectral_contrast", "tempo", save_local=True)
+    #     audio_features.append(audio)
 
-    # audio_features = load_saved_audio_features("./data/")
+    audio_features = load_saved_audio_features("./data/")
 
     feature_matrix = np.vstack([audio.features for audio in audio_features])
     genre_labels = [audio.genre for audio in audio_features]
