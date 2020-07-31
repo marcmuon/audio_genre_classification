@@ -19,7 +19,7 @@ class Model:
         self.y = self.encoder.fit_transform(labels)
         self.cfg = cfg
 
-        # populated in .run_cv_trials()
+        # populated in .train_kfold()
         self.best_estimator = None
         self.holdout_test_set = None
         self.holdout_val_set = None
@@ -55,7 +55,7 @@ class Model:
             **self.cfg['tt_val_dict'])
 
         # Note these val sets won't go into GridSearchCV
-        # We'll predict on these in the .predict_from_val() method
+        # We'll predict on these in the ._predict() method
         self.holdout_val_set = (X_val, y_val)
         
         pipe = Pipeline([
@@ -95,7 +95,7 @@ class Model:
         return TP, FP, TN, FN
 
 
-    def _predict_(self, holdout_type):
+    def _predict(self, holdout_type):
         if holdout_type == "val":
             X_holdout, y_holdout = self.holdout_val_set
 
@@ -118,7 +118,7 @@ class Model:
         """
         Specify either "val" or "test" as a string arg
         """
-        TP, FP, TN, FN = self._predict_(holdout_type)
+        TP, FP, TN, FN = self._predict(holdout_type)
 
         print(f'{holdout_type} Set, per class:')
         print(f'TP:{TP}, FP:{FP}, TN:{TN}, FN:{FN}')
