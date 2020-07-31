@@ -56,7 +56,7 @@ class Model:
                 stratify=self.y,
                 **self.cfg['tt_test_dict'])
 
-        self.holdout_test_set.append(X_test, y_test)
+        self.holdout_test_set.append((X_test, y_test))
 
         for i in range(n_repeats):
 
@@ -64,9 +64,13 @@ class Model:
                 X_cv,
                 y_cv,
                 random_state=i,
-                y_cv,
+                stratify=y_cv,
                 **self.cfg['tt_val_dict'])
 
+            # Note these val sets won't go into GridSearchCV
+            # We'll predict on these in the .predict_from_holdout() method
+            self.holdout_val_sets.append((X_val, y_val))
+            
             pipe = Pipeline([
                 ('scaler', self.cfg['scaler']),
                 ('model', self.cfg['base_model'])
@@ -87,21 +91,17 @@ class Model:
 
             self.best_estimators.append(best_estimator)
 
-            # Note these val sets never went into GridSearchCV
-            # We'll predict on these in the .predict_from_holdout() method
-            self.holdout_val_sets.append((X_cv, y_cv))
 
-
-    def _parse_conf_matrix(conf_mat):
+    def _parse_conf_matrix(self, cnf_matrix):
+        TP = np.diag(cnf_matrix)
         FP = cnf_matrix.sum(axis=0) - np.diag(cnf_matrix)
         FN = cnf_matrix.sum(axis=1) - np.diag(cnf_matrix)
-        TP = np.diag(cnf_matrix)
         TN = cnf_matrix.sum() - (FP + FN + TP)
-
-        FP = FP.astype(float)
-        FN = FN.astype(float)
+        
         TP = TP.astype(float)
+        FP = FP.astype(float)
         TN = TN.astype(float)
+        FN = FN.astype(float)
 
         return TP, FP, TN, FN
 
@@ -114,8 +114,8 @@ class Model:
         self.y_preds = []
 
         for i, val in enumerate(self.holdout_val_sets):
-
             X_val, y_val = val[0], val[1]
+
             scaler = self.best_estimators[i]['scaler']
             model = self.best_estimators[i]['model']
 
@@ -123,37 +123,35 @@ class Model:
             y_pred = model.predict(X_val_scaled)
             cnf_matrix = confusion_matrix(y_val, y_pred)
 
-            TP, FP, TN, FN = _parse_conf_matrix(cnf_matrix)
-
+            TP, FP, TN, FN = self._parse_conf_matrix(cnf_matrix)
+            
             print(f'Val Set from Trial Number {i}, per class:')
-            print(f'TN:{TN}, FP:{FP}, FN:{FN}, TP:{TP}')
+            print(f'TP:{TP}, FP:{FP}, TN:{TN}, FN:{FN}')
 
             self.fprs.append(FP / (FP + TN))
             self.fnrs.append(FN / (TP + FN))
             self.accuracies.append((TP + TN) / (TP + TN + FP + FN))
 
-        for i in range(len(self.fprs)):
 
-            print(f'False Positive Rate per Class, Trial {i}: {self.fprs[i]}')
-            print(f'False Negative Rate per Class, Trial {i}: {self.fnrs[i]}')
-            print(f'Accuracy per Class, Trial {i}: {self.accuracies[i]}')
+        print(f'Avg False Positive Rate per Class Across Trials: {np.mean(self.fprs, axis=0)}')
+        print(f'Avg False Negative Rate per Class, Across Trials: {np.mean(self.fnrs, axis=0)}')
+        print(f'Avg Accuracy per Class, Across Trials: {np.mean(self.accuracies, axis=0)}')
+        print("")
 
+    def predict_from_test(self):
 
-    def predict_from_test():
-
-        X_test, y_test = self.holdout_test_set[0], self.holdout_test_set[1]
-
-        scaler = self.best_estimators['scaler']
-        model = self.best_estimators['model']
+        X_test, y_test = self.holdout_test_set[0][0], self.holdout_test_set[0][1]
+        scaler = self.best_estimators[0]['scaler']
+        model = self.best_estimators[0]['model']
 
         X_test_scaled = scaler.transform(X_test)
         y_pred = model.predict(X_test_scaled)
         cnf_matrix = confusion_matrix(y_test, y_pred)
 
-        TP, FP, TN, FN = _parse_conf_matrix(cnf_matrix)
-
+        TP, FP, TN, FN = self._parse_conf_matrix(cnf_matrix)
+        
         print(f'Test Set, per class:')
-        print(f'TN:{TN}, FP:{FP}, FN:{FN}, TP:{TP}')
+        print(f'TP:{TP}, FP:{FP}, TN:{TN}, FN:{FN}')
 
         print(f'Test False Positive Rate per Class: {FP / (FP + TN)}')
         print(f'Test False Negative Rate per Class: {FN / (TP + FN)}')
