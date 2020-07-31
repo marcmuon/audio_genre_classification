@@ -20,45 +20,52 @@ class Model:
 
         # populated in .run_cv_trials()
         self.best_estimators = None
-        self.holdout_test_sets = None
+        self.holdout_test_set = None
+        self.holdout_val_sets = None
 
         # populated in .predict_from_holdout()
-        self.fnr = None
-        self.fpr = None
-        self.accuracy = None
+        self.fnrs = None
+        self.fprs = None
+        self.accuracies = None
         self.y_preds = None
 
-    def run_cv_trials(self, n_trials=1):
+
+    def run_repeated_kfold(self, n_repeats=1):
         """
         Using Pipeline objects as they don't leak transformations
         into the validation folds as shown here: https://bit.ly/2N7rdQ0,
         and here: https://bit.ly/346THQL
 
-        The trials iteration creates a unique train_test_split, hence
-        a unique heldout test. We save this test set for predictions
-        later on, and then we'll average the heldout test predictions
-        (via their associated best_estimator) for a better sense of
-        generalization error.
-
         Note that return_train_score=True and verbose=3 in GridSearchCV
-        is useful for debugging as you'll see if your models are overfitting
-        badly.
+        is useful for debugging.
         """
 
         encoder = LabelEncoder()
         self.y = encoder.fit_transform(self.y)
 
         self.best_estimators = []
-        self.holdout_test_sets = []
+        self.holdout_test_set = []
+        self.holdout_val_sets = []
 
-        for i in range(n_trials):
-
-            X_cv, X_test, y_cv, y_test = train_test_split(
+        # Save a holdout test set that WON'T go through RepeatedKFold
+        # We will not fit any paramter choices to the holdout test set
+        X_cv, X_test, y_cv, y_test = train_test_split(
                 self.X,
                 self.y,
-                random_state=i,
+                random_state=42,
                 stratify=self.y,
-                **self.cfg['tt_dict'])
+                **self.cfg['tt_test_dict'])
+
+        self.holdout_test_set.append(X_test, y_test)
+
+        for i in range(n_repeats):
+
+            X_train, X_val, y_train, y_val = train_test_split(
+                X_cv,
+                y_cv,
+                random_state=i,
+                y_cv,
+                **self.cfg['tt_val_dict'])
 
             pipe = Pipeline([
                 ('scaler', self.cfg['scaler']),
@@ -70,56 +77,84 @@ class Model:
             grid_search = GridSearchCV(estimator=pipe,
                                        param_grid=self.cfg['param_grid'],
                                        cv=kf,
-                                       scoring='balanced_accuracy',
                                        return_train_score=True,
                                        verbose=3,
                                        **self.cfg['grid_dict'])
 
-            grid_search.fit(X_cv, y_cv)
+            # refit the best estimator on the FULL train set
+            grid_search.fit(X_train, y_train)
             best_estimator = grid_search.best_estimator_
 
             self.best_estimators.append(best_estimator)
-            self.holdout_test_sets.append((X_test, y_test))
+
+            # Note these val sets never went into GridSearchCV
+            # We'll predict on these in the .predict_from_holdout() method
+            self.holdout_val_sets.append((X_cv, y_cv))
+
+
+    def _parse_conf_matrix(conf_mat):
+        FP = cnf_matrix.sum(axis=0) - np.diag(cnf_matrix)
+        FN = cnf_matrix.sum(axis=1) - np.diag(cnf_matrix)
+        TP = np.diag(cnf_matrix)
+        TN = cnf_matrix.sum() - (FP + FN + TP)
+
+        FP = FP.astype(float)
+        FN = FN.astype(float)
+        TP = TP.astype(float)
+        TN = TN.astype(float)
+
+        return TP, FP, TN, FN
+
 
     def predict_from_holdout(self):
 
-        self.fpr = []
-        self.fnr = []
-        self.accuracy = []
+        self.fprs = []
+        self.fnrs = []
+        self.accuracies = []
         self.y_preds = []
 
-        for i, test in enumerate(self.holdout_test_sets):
+        for i, val in enumerate(self.holdout_val_sets):
 
-            X_test, y_test = test[0], test[1]
+            X_val, y_val = val[0], val[1]
             scaler = self.best_estimators[i]['scaler']
             model = self.best_estimators[i]['model']
 
-            X_test_scaled = scaler.transform(X_test)
+            X_val_scaled = scaler.transform(X_val)
+            y_pred = model.predict(X_val_scaled)
+            cnf_matrix = confusion_matrix(y_val, y_pred)
 
-            y_pred = model.predict(X_test_scaled)
+            TP, FP, TN, FN = _parse_conf_matrix(cnf_matrix)
 
-            cnf_matrix = confusion_matrix(y_test, y_pred)
-
-            FP = cnf_matrix.sum(axis=0) - np.diag(cnf_matrix)
-            FN = cnf_matrix.sum(axis=1) - np.diag(cnf_matrix)
-            TP = np.diag(cnf_matrix)
-            TN = cnf_matrix.sum() - (FP + FN + TP)
-
-            FP = FP.astype(float)
-            FN = FN.astype(float)
-            TP = TP.astype(float)
-            TN = TN.astype(float)
-
-            print(f'Test Set from Trial Number {i}, per class:')
+            print(f'Val Set from Trial Number {i}, per class:')
             print(f'TN:{TN}, FP:{FP}, FN:{FN}, TP:{TP}')
 
-            self.fpr.append(FP / (FP + TN))
-            self.fnr.append(FN / (TP + FN))
-            self.accuracy.append((TP + TN) / (TP + TN + FP + FN))
+            self.fprs.append(FP / (FP + TN))
+            self.fnrs.append(FN / (TP + FN))
+            self.accuracies.append((TP + TN) / (TP + TN + FP + FN))
 
-        for i in range(len(self.fpr)):
+        for i in range(len(self.fprs)):
 
-            print(f'False Positive Rate per Class, Trial {i}: {self.fpr[i]}')
-            print(f'False Negative Rate per Class, Trial {i}: {self.fnr[i]}')
-            print(f'Accuracy per Class, Trial {i}: {self.accuracy[i]}')
+            print(f'False Positive Rate per Class, Trial {i}: {self.fprs[i]}')
+            print(f'False Negative Rate per Class, Trial {i}: {self.fnrs[i]}')
+            print(f'Accuracy per Class, Trial {i}: {self.accuracies[i]}')
 
+
+    def predict_from_test():
+
+        X_test, y_test = self.holdout_test_set[0], self.holdout_test_set[1]
+
+        scaler = self.best_estimators['scaler']
+        model = self.best_estimators['model']
+
+        X_test_scaled = scaler.transform(X_test)
+        y_pred = model.predict(X_test_scaled)
+        cnf_matrix = confusion_matrix(y_test, y_pred)
+
+        TP, FP, TN, FN = _parse_conf_matrix(cnf_matrix)
+
+        print(f'Test Set, per class:')
+        print(f'TN:{TN}, FP:{FP}, FN:{FN}, TP:{TP}')
+
+        print(f'Test False Positive Rate per Class: {FP / (FP + TN)}')
+        print(f'Test False Negative Rate per Class: {FN / (TP + FN)}')
+        print(f'Test Accuracy per Class: {(TP + TN) / (TP + TN + FP + FN)}')

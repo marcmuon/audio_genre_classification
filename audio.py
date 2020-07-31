@@ -60,6 +60,7 @@ class AudioFeature:
         spec_con_feature = np.hstack([spec_con_mean, spec_con_std])
         self._concat_features(spec_con_feature)
 
+
     def _extract_tempo(self):
         """
         Extract the BPM.
@@ -67,6 +68,7 @@ class AudioFeature:
         """
         tempo = librosa.beat.tempo(y=self.y, sr=self.sr)
         self._concat_features(tempo)
+
 
     def extract_features(self, *feature_list, save_local=False):
         """
@@ -89,6 +91,7 @@ class AudioFeature:
 
         if save_local:
             self._save_local(mem_clean=True)
+
 
     def _save_local(self, mem_clean=True):
         self.local_path = self.path.split('/')[-1]
