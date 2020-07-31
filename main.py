@@ -78,8 +78,8 @@ if __name__ == "__main__":
     )
 
     model = Model(feature_matrix, genre_labels, model_cfg)
-    model.run_repeated_kfold(n_repeats=3)
-    model.predict_from_holdout()
-    model.predict_from_test()
+    model.train_kfold()
+    model.predict(holdout_type="val")
+    model.predict(holdout_type="test")
 
     

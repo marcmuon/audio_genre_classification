@@ -19,18 +19,18 @@ class Model:
         self.cfg = cfg
 
         # populated in .run_cv_trials()
-        self.best_estimators = None
+        self.best_estimator = None
         self.holdout_test_set = None
-        self.holdout_val_sets = None
+        self.holdout_val_set = None
 
         # populated in .predict_from_holdout()
-        self.fnrs = None
-        self.fprs = None
-        self.accuracies = None
-        self.y_preds = None
+        self.fnr = None
+        self.fpr = None
+        self.accuracy = None
+        self.y_pred = None
 
 
-    def run_repeated_kfold(self, n_repeats=1):
+    def train_kfold(self):
         """
         Using Pipeline objects as they don't leak transformations
         into the validation folds as shown here: https://bit.ly/2N7rdQ0,
@@ -43,10 +43,6 @@ class Model:
         encoder = LabelEncoder()
         self.y = encoder.fit_transform(self.y)
 
-        self.best_estimators = []
-        self.holdout_test_set = []
-        self.holdout_val_sets = []
-
         # Save a holdout test set that WON'T go through RepeatedKFold
         # We will not fit any paramter choices to the holdout test set
         X_cv, X_test, y_cv, y_test = train_test_split(
@@ -58,38 +54,39 @@ class Model:
 
         self.holdout_test_set.append((X_test, y_test))
 
-        for i in range(n_repeats):
+        # From the non-holdout-test data, split off a validation piece
+        X_train, X_val, y_train, y_val = train_test_split(
+            X_cv,
+            y_cv,
+            random_state=i,
+            stratify=y_cv,
+            **self.cfg['tt_val_dict'])
 
-            X_train, X_val, y_train, y_val = train_test_split(
-                X_cv,
-                y_cv,
-                random_state=i,
-                stratify=y_cv,
-                **self.cfg['tt_val_dict'])
+        # Note these val sets won't go into GridSearchCV
+        # We'll predict on these in the .predict_from_val() method
+        self.holdout_val_set.append((X_val, y_val))
+        
+        pipe = Pipeline([
+            ('scaler', self.cfg['scaler']),
+            ('model', self.cfg['base_model'])
+        ])
 
-            # Note these val sets won't go into GridSearchCV
-            # We'll predict on these in the .predict_from_holdout() method
-            self.holdout_val_sets.append((X_val, y_val))
-            
-            pipe = Pipeline([
-                ('scaler', self.cfg['scaler']),
-                ('model', self.cfg['base_model'])
-            ])
+        # Use stratification within KFold Split inside GridSearchCV
+        # I believe sklearn now defaults to StratifiedKFold if you pass
+        # an integer to the cv argument in GridSearchCV, but it did not used to
+        kf = StratifiedKFold(**self.cfg['kf_dict'])
 
-            kf = StratifiedKFold(**self.cfg['kf_dict'])
+        # Perform KFold many times according to our Param Grid Search
+        grid_search = GridSearchCV(estimator=pipe,
+                                    param_grid=self.cfg['param_grid'],
+                                    cv=kf,
+                                    return_train_score=True,
+                                    verbose=3,
+                                    **self.cfg['grid_dict'])
 
-            grid_search = GridSearchCV(estimator=pipe,
-                                       param_grid=self.cfg['param_grid'],
-                                       cv=kf,
-                                       return_train_score=True,
-                                       verbose=3,
-                                       **self.cfg['grid_dict'])
-
-            # refit the best estimator on the FULL train set
-            grid_search.fit(X_train, y_train)
-            best_estimator = grid_search.best_estimator_
-
-            self.best_estimators.append(best_estimator)
+        # refit the best estimator on the FULL train set
+        grid_search.fit(X_train, y_train)
+        self.best_estimator = grid_search.best_estimator_
 
 
     def _parse_conf_matrix(self, cnf_matrix):
@@ -106,41 +103,49 @@ class Model:
         return TP, FP, TN, FN
 
 
-    def predict_from_holdout(self):
-
-        self.fprs = []
-        self.fnrs = []
-        self.accuracies = []
-        self.y_preds = []
-
-        for i, val in enumerate(self.holdout_val_sets):
-            X_val, y_val = val[0], val[1]
-
-            scaler = self.best_estimators[i]['scaler']
-            model = self.best_estimators[i]['model']
-
-            X_val_scaled = scaler.transform(X_val)
-            y_pred = model.predict(X_val_scaled)
-            cnf_matrix = confusion_matrix(y_val, y_pred)
-
-            TP, FP, TN, FN = self._parse_conf_matrix(cnf_matrix)
-            
-            print(f'Val Set from Trial Number {i}, per class:')
-            print(f'TP:{TP}, FP:{FP}, TN:{TN}, FN:{FN}')
-
-            self.fprs.append(FP / (FP + TN))
-            self.fnrs.append(FN / (TP + FN))
-            self.accuracies.append((TP + TN) / (TP + TN + FP + FN))
+    def predict(self, holdout_type)
+        """
+        Specify either "val" or "test" as a string arg
+        """
+        if holdout_type == "val":
+            self._predict_from_val()
+        
+        elif holdout_type == "test":
+            self._predict_from_test()
+        
+        else:
+            raise ValueError("Please specify either 'val' or 'test' for holdout_type")
 
 
-        print(f'Avg False Positive Rate per Class Across Trials: {np.mean(self.fprs, axis=0)}')
-        print(f'Avg False Negative Rate per Class, Across Trials: {np.mean(self.fnrs, axis=0)}')
-        print(f'Avg Accuracy per Class, Across Trials: {np.mean(self.accuracies, axis=0)}')
+    def _predict_from_val(self):
+
+        X_val, y_val = self.holdout_val_set[0]
+
+        scaler = self.best_estimators[i]['scaler']
+        model = self.best_estimators[i]['model']
+
+        X_val_scaled = scaler.transform(X_val)
+        y_pred = model.predict(X_val_scaled)
+        cnf_matrix = confusion_matrix(y_val, y_pred)
+
+        TP, FP, TN, FN = self._parse_conf_matrix(cnf_matrix)
+        
+        print(f'Val Set from Trial Number {i}, per class:')
+        print(f'TP:{TP}, FP:{FP}, TN:{TN}, FN:{FN}')
+
+        self.fpr = FP / (FP + TN)
+        self.fnr = FN / (TP + FN)
+        self.accuracy = (TP + TN) / (TP + TN + FP + FN)
+
+        print(f'Avg False Positive Rate per Class Across Trials: {self.fpr}')
+        print(f'Avg False Negative Rate per Class, Across Trials: {self.fnr}')
+        print(f'Avg Accuracy per Class, Across Trials: {self.accuracy}')
         print("")
 
-    def predict_from_test(self):
 
-        X_test, y_test = self.holdout_test_set[0][0], self.holdout_test_set[0][1]
+    def _predict_from_test(self):
+
+        X_test, y_test = self.holdout_test_set[0]
         scaler = self.best_estimators[0]['scaler']
         model = self.best_estimators[0]['model']
 
