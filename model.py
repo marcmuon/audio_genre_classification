@@ -97,57 +97,34 @@ class Model:
         return TP, FP, TN, FN
 
 
+    def _predict_(self, holdout_type):
+        if holdout_type == "val":
+            X_holdout, y_holdout = self.holdout_val_set
+
+        elif holdout_type == "test":
+            X_holdout, y_holdout = self.holdout_test_set
+        
+        scaler = self.best_estimator['scaler']
+        model = self.best_estimator['model']
+
+        X_holdout_scaled = scaler.transform(X_holdout)
+        y_pred = model.predict(X_holdout_scaled)
+        cnf_matrix = confusion_matrix(y_holdout, y_pred)
+
+        TP, FP, TN, FN = self._parse_conf_matrix(cnf_matrix)
+
+        return TP, FP, TN, FN
+
+
     def predict(self, holdout_type):
         """
         Specify either "val" or "test" as a string arg
         """
-        if holdout_type == "val":
-            self._predict_from_val()
-        
-        elif holdout_type == "test":
-            self._predict_from_test()
-        
-        else:
-            raise ValueError("Please specify either 'val' or 'test' for holdout_type")
+        TP, FP, TN, FN = self._predict_(holdout_type)
 
-
-    def _predict_from_val(self):
-
-        X_val, y_val = self.holdout_val_set
-
-        scaler = self.best_estimator['scaler']
-        model = self.best_estimator['model']
-
-        X_val_scaled = scaler.transform(X_val)
-        y_pred = model.predict(X_val_scaled)
-        cnf_matrix = confusion_matrix(y_val, y_pred)
-
-        TP, FP, TN, FN = self._parse_conf_matrix(cnf_matrix)
-        
-        print(f'Val Set, per class:')
+        print(f'{holdout_type} Set, per class:')
         print(f'TP:{TP}, FP:{FP}, TN:{TN}, FN:{FN}')
 
-
-        print(f'Val False Positive Rate per Class: {FP / (FP + TN)}')
-        print(f'Val False Negative Rate per Class: {FN / (TP + FN)}')
-        print(f'Val Accuracy per Class: {(TP + TN) / (TP + TN + FP + FN)}')
-
-
-    def _predict_from_test(self):
-
-        X_test, y_test = self.holdout_test_set
-        scaler = self.best_estimator['scaler']
-        model = self.best_estimator['model']
-
-        X_test_scaled = scaler.transform(X_test)
-        y_pred = model.predict(X_test_scaled)
-        cnf_matrix = confusion_matrix(y_test, y_pred)
-
-        TP, FP, TN, FN = self._parse_conf_matrix(cnf_matrix)
-        
-        print(f'Test Set, per class:')
-        print(f'TP:{TP}, FP:{FP}, TN:{TN}, FN:{FN}')
-
-        print(f'Test False Positive Rate per Class: {FP / (FP + TN)}')
-        print(f'Test False Negative Rate per Class: {FN / (TP + FN)}')
-        print(f'Test Accuracy per Class: {(TP + TN) / (TP + TN + FP + FN)}')
+        print(f'{holdout_type} False Positive Rate per Class: {FP / (FP + TN)}')
+        print(f'{holdout_type} False Negative Rate per Class: {FN / (TP + FN)}')
+        print(f'{holdout_type} Accuracy per Class: {(TP + TN) / (TP + TN + FP + FN)}')
