@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
+import os
+import pickle
 
 
 def parse_audio_playlist(playlist):
@@ -21,6 +23,22 @@ def parse_audio_playlist(playlist):
     genres = df["Genre"].values
 
     return zip(paths, genres)
+        
+
+def load_saved_audio_features(path):
+    
+    files = next(os.walk(path))
+    pkl_list = files[-1]
+    pkl_list = [p for p in pkl_list if p.endswith(".pkl")]
+    
+    audio_features = []
+    
+    for p in pkl_list:
+        with open(f"{path}{p}", "rb") as input_file:
+            e = pickle.load(input_file)
+            audio_features.append(e)
+    
+    return audio_features
 
 
 if __name__ == "__main__":
@@ -34,12 +52,14 @@ if __name__ == "__main__":
         audio.extract_features("mfcc", "spectral_contrast", "tempo", save_local=True)
         audio_features.append(audio)
 
+    # audio_features = load_saved_audio_features("./data/")
+
     feature_matrix = np.vstack([audio.features for audio in audio_features])
     genre_labels = [audio.genre for audio in audio_features]
 
     model_cfg = dict(
-        tt_test_dict=dict(shuffle=True, test_size=0.2),
-        tt_val_dict=dict(shuffle=True, test_size=0.25)
+        tt_test_dict=dict(shuffle=True, test_size=0.3),
+        tt_val_dict=dict(shuffle=True, test_size=0.25),
         scaler=StandardScaler(copy=True),
         base_model=RandomForestClassifier(
             random_state=42,
@@ -58,6 +78,8 @@ if __name__ == "__main__":
     )
 
     model = Model(feature_matrix, genre_labels, model_cfg)
-    model.run_repeated_kfold(n_repeats=2)
+    model.run_repeated_kfold(n_repeats=3)
     model.predict_from_holdout()
     model.predict_from_test()
+
+    
