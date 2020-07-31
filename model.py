@@ -15,7 +15,8 @@ class Model:
     def __init__(self, feature_matrix, labels, cfg):
 
         self.X = feature_matrix
-        self.y = labels
+        self.encoder = LabelEncoder()
+        self.y = self.encoder.fit_transform(labels)
         self.cfg = cfg
 
         # populated in .run_cv_trials()
@@ -33,9 +34,6 @@ class Model:
         Note that return_train_score=True and verbose=3 in GridSearchCV
         is useful for debugging.
         """
-
-        encoder = LabelEncoder()
-        self.y = encoder.fit_transform(self.y)
 
         # Save a holdout test set that WON'T go through RepeatedKFold
         # We will not fit any paramter choices to the holdout test set
